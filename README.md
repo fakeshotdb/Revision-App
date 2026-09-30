@@ -19,7 +19,8 @@ everything is saved on the device it's used on.
   (Whenever / This week / Urgent).
 - Tasks are sorted **urgent first, then shortest first**, so the one at the top
   ("Next up") is always the one to do.
-- Tap the circle to tick a task off. Everything can be undone for a few seconds.
+- Tap the circle to tick a task off. Tap the task itself to change its name,
+  time or urgency (or delete it). Ticking off and deleting can be undone for a few seconds.
 
 ## Getting it on the phone
 

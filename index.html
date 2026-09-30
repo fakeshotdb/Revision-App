@@ -129,7 +129,7 @@
   .task.leaving { opacity: 0; transform: translateX(20px); }
   .check { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--muted); flex: none; display: grid; place-items: center; }
   .task.done .check { background: var(--good); border-color: var(--good); color: var(--card); }
-  .task .body { flex: 1; min-width: 0; }
+  .task .body { flex: 1; min-width: 0; cursor: pointer; align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
   .task .title { font-size: 16px; word-wrap: break-word; }
   .task.done .title { text-decoration: line-through; color: var(--muted); }
   .task .meta { display: flex; gap: 6px; margin-top: 4px; font-size: 12px; }
@@ -244,6 +244,7 @@
 
     <h2 id="todo-h">Do in this order</h2>
     <ul class="tasks" id="tasks"></ul>
+    <p class="small muted hidden" id="tasks-hint" style="text-align:center;margin:4px 0 0">Tap a task to edit it</p>
     <div class="empty hidden" id="tasks-empty">Nothing on the list. Back to revision 📚</div>
 
     <div id="done-wrap" class="hidden">
@@ -284,6 +285,23 @@
       <button class="btn" value="save">Save</button>
     </div>
     <button class="danger" type="button" id="reset-rev">Start over (clears revision history)</button>
+  </form>
+</dialog>
+
+<dialog id="task-edit">
+  <form method="dialog" id="task-edit-form">
+    <h3>Edit task</h3>
+    <label class="field"><span>Task</span>
+      <input type="text" id="edit-title" autocomplete="off" required></label>
+    <div class="chip-label" style="margin-top:0">How long?</div>
+    <div class="chips" id="edit-dur"></div>
+    <div class="chip-label">How urgent?</div>
+    <div class="chips" id="edit-urg" style="margin-bottom:18px"></div>
+    <div class="dialog-actions">
+      <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn" value="save">Save</button>
+    </div>
+    <button class="danger" type="button" id="edit-delete">Delete task</button>
   </form>
 </dialog>
 
@@ -507,7 +525,7 @@
     return `<li class="task${t.done ? ' done' : ''}${first ? ' first' : ''}" data-id="${t.id}">
       <button class="check" data-act="toggle" aria-label="${t.done ? 'Mark not done' : 'Mark done'}">${t.done
         ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' : ''}</button>
-      <div class="body">
+      <div class="body" data-act="edit" role="button" tabindex="0" aria-label="Edit task">
         <div class="title">${esc(t.title)}</div>
         <div class="meta"><span class="tag t">${durLabel(t.mins)}</span><span class="tag u${t.urgency}">${urgLabel(t.urgency)}</span></div>
       </div>
@@ -525,6 +543,7 @@
     const done = state.tasks.filter(t => t.done).sort((a, b) => b.doneAt - a.doneAt);
     $('tasks').innerHTML = open.map((t, i) => (i === 0 ? '<div class="next-label">Next up</div>' : '') + taskHTML(t, i === 0)).join('');
     $('tasks-empty').classList.toggle('hidden', open.length > 0);
+    $('tasks-hint').classList.toggle('hidden', open.length === 0);
     $('todo-h').classList.toggle('hidden', open.length === 0);
     $('done-wrap').classList.toggle('hidden', done.length === 0);
     $('done-h').textContent = `Done (${done.length})`;
@@ -560,12 +579,46 @@
         toast('Done ✓', () => { t.done = false; save(); renderAdmin(); });
       } else apply();
     } else if (btn.dataset.act === 'del') {
-      const idx = state.tasks.indexOf(t);
-      state.tasks.splice(idx, 1); save(); renderAdmin();
-      toast('Task deleted', () => { state.tasks.splice(idx, 0, t); save(); renderAdmin(); });
+      deleteTask(t);
+    } else if (btn.dataset.act === 'edit') {
+      openEdit(t);
     }
   }
+
+  function deleteTask(t) {
+    const idx = state.tasks.indexOf(t);
+    state.tasks.splice(idx, 1); save(); renderAdmin();
+    toast('Task deleted', () => { state.tasks.splice(idx, 0, t); save(); renderAdmin(); });
+  }
+
+  // Edit dialog: title, duration and urgency, saved only on "Save".
+  const editDlg = $('task-edit');
+  let editing = null, editDur, editUrg;
+  function renderEditChips() {
+    chips($('edit-dur'), DURS, editDur, '', v => { editDur = v; renderEditChips(); });
+    chips($('edit-urg'), URGS, editUrg, 'u', v => { editUrg = v; renderEditChips(); });
+  }
+  function openEdit(t) {
+    editing = t; editDur = t.mins; editUrg = t.urgency;
+    $('edit-title').value = t.title;
+    renderEditChips();
+    editDlg.showModal();
+  }
+  editDlg.addEventListener('close', () => {
+    const t = editing; editing = null;
+    if (!t || editDlg.returnValue !== 'save') return;
+    const title = $('edit-title').value.trim();
+    if (title) t.title = title;
+    t.mins = editDur; t.urgency = editUrg;
+    save(); renderAdmin();
+  });
+  $('edit-delete').addEventListener('click', () => {
+    const t = editing; editing = null;
+    editDlg.close();
+    if (t) deleteTask(t);
+  });
   $('tasks').addEventListener('click', onTaskClick);
+  $('tasks').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.act === 'edit') onTaskClick(e); });
   $('done-tasks').addEventListener('click', onTaskClick);
   $('clear-done').addEventListener('click', () => {
     const before = state.tasks.slice();
