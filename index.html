@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Revise</title>
+<meta name="description" content="Revision-first daily planner: question bank pacing plus a quick admin to-do list.">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Revise">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --card: #ffffff;
+    --text: #13201e;
+    --muted: #5f706c;
+    --line: #dde5e3;
+    --accent: #0f766e;
+    --accent-soft: #d8efec;
+    --accent-text: #ffffff;
+    --good: #15803d;
+    --warn: #b45309;
+    --urgent: #b91c1c;
+    --urgent-soft: #fde7e7;
+    --soon: #b45309;
+    --soon-soft: #fdf0dc;
+    --low: #4b5d59;
+    --low-soft: #e9eeed;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c1413;
+      --card: #16201f;
+      --text: #e7efed;
+      --muted: #93a39f;
+      --line: #26322f;
+      --accent: #2dd4bf;
+      --accent-soft: #123330;
+      --accent-text: #062b27;
+      --good: #4ade80;
+      --warn: #fbbf24;
+      --urgent: #f87171;
+      --urgent-soft: #3a1717;
+      --soon: #fbbf24;
+      --soon-soft: #36280d;
+      --low: #a3b3af;
+      --low-soft: #1f2a28;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom));
+  }
+  main { max-width: 520px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 28px; margin: 8px 0 16px; letter-spacing: -.02em; display: flex; align-items: center; justify-content: space-between; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 24px 4px 8px; font-weight: 600; }
+  .card { background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); border: 1px solid var(--line); }
+  .card + .card { margin-top: 12px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 14px; }
+  .hidden { display: none !important; }
+
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  .btn { background: var(--accent); color: var(--accent-text); border-radius: 12px; padding: 12px 18px; font-weight: 600; min-height: 48px; }
+  .btn:active { transform: scale(.98); }
+  .btn.ghost { background: var(--accent-soft); color: var(--accent); }
+  .btn.block { width: 100%; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--muted); }
+  .icon-btn:active { background: var(--line); }
+
+  input[type=number], input[type=text], input[type=date] {
+    font: inherit; font-size: 17px; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; width: 100%; min-height: 48px;
+    -webkit-appearance: none; appearance: none;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  label.field { display: block; margin-bottom: 14px; }
+  label.field span { display: block; font-size: 14px; color: var(--muted); margin: 0 2px 6px; }
+
+  /* Revision hero */
+  .hero { text-align: center; padding: 26px 18px 22px; }
+  .hero .big { font-size: 72px; font-weight: 700; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .hero .label { margin-top: 6px; font-size: 17px; }
+  .hero.done .big { color: var(--good); }
+  .progress { height: 10px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; margin: 18px 0 8px; }
+  .progress > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s ease; }
+  .hero.done .progress > div { background: var(--good); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+  .stats div { padding: 4px 0; }
+  .stats b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .stats span { font-size: 13px; color: var(--muted); }
+
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 3px; margin-bottom: 12px; }
+  .seg button { padding: 9px 6px; border-radius: 9px; font-size: 14px; color: var(--muted); font-weight: 500; }
+  .seg button[aria-pressed=true] { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .row { display: flex; gap: 10px; }
+  .row > input { flex: 1; }
+
+  .history { list-style: none; padding: 0; margin: 0; }
+  .history li { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .history li:last-child { border-bottom: 0; }
+  .history b { font-variant-numeric: tabular-nums; }
+
+  /* Tasks */
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .chip { padding: 8px 12px; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); font-size: 14px; color: var(--muted); min-height: 36px; }
+  .chip[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .chip.u3[aria-pressed=true] { background: var(--urgent); border-color: var(--urgent); color: #fff; }
+  .chip.u2[aria-pressed=true] { background: var(--soon); border-color: var(--soon); color: #fff; }
+  @media (prefers-color-scheme: dark) { .chip.u3[aria-pressed=true], .chip.u2[aria-pressed=true] { color: #1a0c0c; } }
+  .chip-label { font-size: 13px; color: var(--muted); margin: 14px 2px 0; }
+
+  .tasks { list-style: none; padding: 0; margin: 0; }
+  .task { display: flex; align-items: center; gap: 12px; padding: 12px 6px 12px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; box-shadow: var(--shadow); transition: opacity .25s, transform .25s; }
+  .task.first { border-color: var(--accent); border-width: 2px; padding: 11px 5px 11px 11px; }
+  .task.leaving { opacity: 0; transform: translateX(20px); }
+  .check { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--muted); flex: none; display: grid; place-items: center; }
+  .task.done .check { background: var(--good); border-color: var(--good); color: var(--card); }
+  .task .body { flex: 1; min-width: 0; }
+  .task .title { font-size: 16px; word-wrap: break-word; }
+  .task.done .title { text-decoration: line-through; color: var(--muted); }
+  .task .meta { display: flex; gap: 6px; margin-top: 4px; font-size: 12px; }
+  .tag { padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+  .tag.t { background: var(--low-soft); color: var(--low); }
+  .tag.u1 { background: var(--low-soft); color: var(--low); }
+  .tag.u2 { background: var(--soon-soft); color: var(--soon); }
+  .tag.u3 { background: var(--urgent-soft); color: var(--urgent); }
+  .next-label { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin: 0 4px 6px; }
+  .empty { text-align: center; padding: 28px 12px; color: var(--muted); }
+  .link { color: var(--accent); font-weight: 600; font-size: 14px; padding: 6px; }
+
+  /* Tab bar */
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--line); display: flex; justify-content: center; padding: 6px 12px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
+  nav.tabs .inner { display: grid; grid-template-columns: 1fr 1fr; max-width: 520px; width: 100%; }
+  nav.tabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; font-size: 12px; color: var(--muted); font-weight: 500; position: relative; }
+  nav.tabs button[aria-selected=true] { color: var(--accent); }
+  nav.tabs svg { width: 26px; height: 26px; }
+  .badge { position: absolute; top: 2px; left: calc(50% + 8px); background: var(--urgent); color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; border-radius: 9px; display: grid; place-items: center; padding: 0 5px; }
+
+  /* Dialog */
+  dialog { border: 0; border-radius: 20px; padding: 20px; width: min(92vw, 440px); background: var(--card); color: var(--text); }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  dialog h3 { margin: 0 0 16px; font-size: 20px; }
+  .dialog-actions { display: flex; gap: 10px; margin-top: 6px; }
+  .dialog-actions .btn { flex: 1; }
+  .danger { color: var(--urgent); font-size: 14px; font-weight: 600; padding: 12px 0 0; width: 100%; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 10px 10px 10px 16px; border-radius: 12px; display: flex; gap: 12px; align-items: center; font-size: 15px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 20; max-width: calc(100vw - 32px); }
+  .toast.show { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
+  .toast button { color: var(--accent-soft); font-weight: 700; padding: 4px 8px; }
+  @media (prefers-color-scheme: dark) { .toast button { color: var(--accent-text); } }
+</style>
+</head>
+<body>
+<main>
+  <!-- ============ REVISION ============ -->
+  <section id="view-rev">
+    <h1>Revision
+      <button class="icon-btn" id="rev-settings" aria-label="Edit exam details">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
+    </h1>
+
+    <!-- First-run setup -->
+    <div id="rev-setup" class="card hidden">
+      <p style="margin-top:0">Two numbers and you're set.</p>
+      <form id="setup-form">
+        <label class="field"><span>Questions left in the bank</span>
+          <input type="number" id="setup-remaining" inputmode="numeric" min="0" placeholder="e.g. 2400" required></label>
+        <label class="field"><span>Exam date</span>
+          <input type="date" id="setup-date" required></label>
+        <button class="btn block" type="submit">Plan my revision</button>
+      </form>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="rev-dash" class="hidden">
+      <div class="card hero" id="hero">
+        <div class="big" id="hero-num">0</div>
+        <div class="label" id="hero-label">questions to go today</div>
+        <div class="progress"><div id="hero-bar" style="width:0%"></div></div>
+        <div class="small muted" id="hero-sub"></div>
+      </div>
+
+      <div class="card">
+        <div class="stats">
+          <div><b id="st-days">0</b><span id="st-days-l">days left</span></div>
+          <div><b id="st-left">0</b><span>questions left</span></div>
+          <div><b id="st-pace">0</b><span>a day after today</span></div>
+        </div>
+      </div>
+
+      <h2>Log progress</h2>
+      <div class="card">
+        <div class="seg" role="group" aria-label="How to log">
+          <button type="button" id="mode-done" aria-pressed="true">I did…</button>
+          <button type="button" id="mode-left" aria-pressed="false">Bank says left…</button>
+        </div>
+        <form id="log-form" class="row">
+          <input type="number" id="log-input" inputmode="numeric" min="0" placeholder="Questions done" required>
+          <button class="btn" type="submit">Save</button>
+        </form>
+      </div>
+
+      <div id="history-wrap" class="hidden">
+        <h2>Recent days</h2>
+        <div class="card" style="padding: 6px 16px;">
+          <ul class="history" id="history"></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ADMIN ============ -->
+  <section id="view-admin" class="hidden">
+    <h1>Admin</h1>
+    <div class="card">
+      <form id="task-form" class="row">
+        <input type="text" id="task-title" placeholder="Add a task…" autocomplete="off" enterkeyhint="done" required>
+        <button class="btn" type="submit" aria-label="Add task">Add</button>
+      </form>
+      <div class="chip-label">How long?</div>
+      <div class="chips" id="dur-chips"></div>
+      <div class="chip-label">How urgent?</div>
+      <div class="chips" id="urg-chips"></div>
+    </div>
+
+    <h2 id="todo-h">Do in this order</h2>
+    <ul class="tasks" id="tasks"></ul>
+    <div class="empty hidden" id="tasks-empty">Nothing on the list. Back to revision 📚</div>
+
+    <div id="done-wrap" class="hidden">
+      <h2 style="display:flex;justify-content:space-between;align-items:center">
+        <span id="done-h">Done</span>
+        <button class="link" id="clear-done">Clear</button>
+      </h2>
+      <ul class="tasks" id="done-tasks"></ul>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <div class="inner" role="tablist">
+    <button role="tab" id="tab-rev" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
+      Revision
+    </button>
+    <button role="tab" id="tab-admin" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Admin
+      <span class="badge hidden" id="admin-badge"></span>
+    </button>
+  </div>
+</nav>
+
+<dialog id="settings">
+  <form method="dialog" id="settings-form">
+    <h3>Exam details</h3>
+    <label class="field"><span>Questions left in the bank</span>
+      <input type="number" id="set-remaining" inputmode="numeric" min="0" required></label>
+    <label class="field"><span>Exam date</span>
+      <input type="date" id="set-date" required></label>
+    <div class="dialog-actions">
+      <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn" value="save">Save</button>
+    </div>
+    <button class="danger" type="button" id="reset-rev">Start over (clears revision history)</button>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"><span id="toast-msg"></span><button id="toast-undo">Undo</button></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Storage ----------
+  const KEY = 'revise-app-v1';
+  const defaultState = () => ({ rev: null, tasks: [], tab: 'rev', logMode: 'done', lastDur: 15, lastUrg: 2 });
+  let state;
+  try { state = Object.assign(defaultState(), JSON.parse(localStorage.getItem(KEY)) || {}); }
+  catch { state = defaultState(); }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+  // Ask the browser not to evict our data under storage pressure.
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+  // ---------- Dates (all local, day-granular) ----------
+  const pad = n => String(n).padStart(2, '0');
+  const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+  const todayKey = () => keyOf(new Date());
+  // Whole days from a to b (Math.round absorbs DST hour shifts).
+  const daysBetween = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 86400000);
+  const fmtDay = k => {
+    const diff = daysBetween(k, todayKey());
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return parseKey(k).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  };
+  const fmt = n => n.toLocaleString();
+
+  const $ = id => document.getElementById(id);
+
+  // ---------- Revision maths ----------
+  // Days left counts today but not exam day: exam tomorrow => 1 day left (today).
+  function revPlan() {
+    const r = state.rev;
+    const today = todayKey();
+    const doneToday = r.log.filter(e => e.d === today).reduce((s, e) => s + e.n, 0);
+    const daysLeft = daysBetween(today, r.examDate);
+    const startOfToday = r.remaining + doneToday;
+    const targetToday = daysLeft > 0 ? Math.ceil(startOfToday / daysLeft) : 0;
+    const leftToday = Math.max(0, targetToday - doneToday);
+    // Pace for the days after today, assuming she hits today's target.
+    const paceAfter = daysLeft > 1 ? Math.ceil(Math.max(0, r.remaining - leftToday) / (daysLeft - 1)) : 0;
+    return { doneToday, daysLeft, targetToday, leftToday, paceAfter };
+  }
+
+  // ---------- Revision render ----------
+  function renderRev() {
+    const has = !!state.rev;
+    $('rev-setup').classList.toggle('hidden', has);
+    $('rev-dash').classList.toggle('hidden', !has);
+    $('rev-settings').classList.toggle('hidden', !has);
+    if (!has) { $('setup-date').min = todayKey(); return; }
+    const r = state.rev;
+    const p = revPlan();
+    const hero = $('hero');
+
+    if (r.remaining === 0) {
+      hero.classList.add('done');
+      $('hero-num').textContent = '🎉';
+      $('hero-label').textContent = 'Question bank finished!';
+      $('hero-bar').style.width = '100%';
+      $('hero-sub').textContent = 'Amazing work. Rest up before the exam.';
+    } else if (p.daysLeft <= 0) {
+      hero.classList.remove('done');
+      $('hero-num').textContent = '🍀';
+      $('hero-label').textContent = p.daysLeft === 0 ? 'Exam day. You’ve got this.' : 'Exam’s been and gone';
+      $('hero-bar').style.width = '100%';
+      $('hero-sub').textContent = 'Tap ✎ to set a new exam date.';
+    } else {
+      const doneTarget = p.leftToday === 0;
+      hero.classList.toggle('done', doneTarget);
+      $('hero-num').textContent = doneTarget ? '✓' : fmt(p.leftToday);
+      $('hero-label').textContent = doneTarget
+        ? 'Today’s target done'
+        : (p.doneToday ? 'more to go today' : 'questions to do today');
+      $('hero-bar').style.width = Math.min(100, p.targetToday ? (p.doneToday / p.targetToday) * 100 : 100) + '%';
+      $('hero-sub').textContent = doneTarget
+        ? `${fmt(p.doneToday)} done today. Anything extra makes the coming days lighter.`
+        : `${fmt(p.doneToday)} of ${fmt(p.targetToday)} done today`;
+    }
+
+    $('st-days').textContent = Math.max(0, p.daysLeft);
+    $('st-days-l').textContent = p.daysLeft === 1 ? 'day left' : 'days left';
+    $('st-left').textContent = fmt(r.remaining);
+    $('st-pace').textContent = p.daysLeft > 1 ? fmt(p.paceAfter) : '–';
+
+    // Log mode
+    const mode = state.logMode;
+    $('mode-done').setAttribute('aria-pressed', mode === 'done');
+    $('mode-left').setAttribute('aria-pressed', mode === 'left');
+    $('log-input').placeholder = mode === 'done' ? 'Questions done' : `Left in bank (now ${fmt(r.remaining)})`;
+
+    // History: totals per day, most recent first
+    const byDay = {};
+    r.log.forEach(e => { byDay[e.d] = (byDay[e.d] || 0) + e.n; });
+    const days = Object.keys(byDay).sort().reverse().slice(0, 7);
+    $('history-wrap').classList.toggle('hidden', days.length === 0);
+    $('history').innerHTML = days.map(d =>
+      `<li><span>${fmtDay(d)}</span><b>${fmt(byDay[d])}</b></li>`).join('');
+  }
+
+  $('setup-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const remaining = Math.max(0, parseInt($('setup-remaining').value, 10) || 0);
+    const examDate = $('setup-date').value;
+    if (!examDate) return;
+    state.rev = { remaining, examDate, log: [] };
+    save(); renderRev();
+  });
+
+  $('mode-done').addEventListener('click', () => { state.logMode = 'done'; save(); renderRev(); });
+  $('mode-left').addEventListener('click', () => { state.logMode = 'left'; save(); renderRev(); });
+
+  $('log-input').setAttribute('enterkeyhint', 'done');
+  $('log-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const r = state.rev;
+    const v = parseInt($('log-input').value, 10);
+    if (isNaN(v) || v < 0) return;
+    let n;
+    if (state.logMode === 'done') n = Math.min(v, r.remaining);
+    else {
+      n = r.remaining - v;
+      if (n < 0) { // bank grew (reset / new bank) – just take the new number
+        const prev = r.remaining;
+        r.remaining = v; save(); renderRev();
+        $('log-input').value = ''; $('log-input').blur();
+        toast(`Updated to ${fmt(v)} left`, () => { r.remaining = prev; save(); renderRev(); });
+        return;
+      }
+    }
+    if (n === 0) { $('log-input').value = ''; return; }
+    const entry = { d: todayKey(), n };
+    r.log.push(entry);
+    r.remaining -= n;
+    save(); renderRev();
+    $('log-input').value = ''; $('log-input').blur();
+    toast(`Logged ${fmt(n)} questions`, () => {
+      const i = r.log.lastIndexOf(entry);
+      if (i >= 0) { r.log.splice(i, 1); r.remaining += n; save(); renderRev(); }
+    });
+  });
+
+  // Settings dialog
+  const dlg = $('settings');
+  $('rev-settings').addEventListener('click', () => {
+    $('set-remaining').value = state.rev.remaining;
+    $('set-date').value = state.rev.examDate;
+    dlg.showModal();
+  });
+  dlg.addEventListener('close', () => {
+    if (dlg.returnValue !== 'save') return;
+    const rem = parseInt($('set-remaining').value, 10);
+    if (!isNaN(rem) && rem >= 0) state.rev.remaining = rem;
+    if ($('set-date').value) state.rev.examDate = $('set-date').value;
+    save(); renderRev();
+  });
+  $('reset-rev').addEventListener('click', () => {
+    if (!confirm('Clear the question count, exam date and history?')) return;
+    state.rev = null; save(); dlg.close(); renderRev();
+  });
+
+  // ---------- Admin tasks ----------
+  const DURS = [[5, '5 min'], [15, '15 min'], [30, '30 min'], [60, '1 hr'], [120, '2 hr+']];
+  const URGS = [[1, 'Whenever'], [2, 'This week'], [3, 'Urgent']];
+  const durLabel = m => (DURS.find(d => d[0] === m) || [0, m + ' min'])[1];
+  const urgLabel = u => URGS.find(x => x[0] === u)[1];
+
+  function chips(el, list, current, cls, onPick) {
+    el.innerHTML = list.map(([v, l]) =>
+      `<button type="button" class="chip ${cls ? cls + v : ''}" data-v="${v}" aria-pressed="${v === current}">${l}</button>`).join('');
+    el.onclick = e => {
+      const b = e.target.closest('button'); if (!b) return;
+      onPick(Number(b.dataset.v));
+    };
+  }
+
+  // Urgency first, then shortest job first, then oldest first.
+  const byPriority = (a, b) => (b.urgency - a.urgency) || (a.mins - b.mins) || (a.created - b.created);
+
+  const esc = s => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function taskHTML(t, first) {
+    return `<li class="task${t.done ? ' done' : ''}${first ? ' first' : ''}" data-id="${t.id}">
+      <button class="check" data-act="toggle" aria-label="${t.done ? 'Mark not done' : 'Mark done'}">${t.done
+        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' : ''}</button>
+      <div class="body">
+        <div class="title">${esc(t.title)}</div>
+        <div class="meta"><span class="tag t">${durLabel(t.mins)}</span><span class="tag u${t.urgency}">${urgLabel(t.urgency)}</span></div>
+      </div>
+      <button class="icon-btn" data-act="del" aria-label="Delete task">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </li>`;
+  }
+
+  function renderAdmin() {
+    chips($('dur-chips'), DURS, state.lastDur, '', v => { state.lastDur = v; save(); renderAdmin(); });
+    chips($('urg-chips'), URGS, state.lastUrg, 'u', v => { state.lastUrg = v; save(); renderAdmin(); });
+
+    const open = state.tasks.filter(t => !t.done).sort(byPriority);
+    const done = state.tasks.filter(t => t.done).sort((a, b) => b.doneAt - a.doneAt);
+    $('tasks').innerHTML = open.map((t, i) => (i === 0 ? '<div class="next-label">Next up</div>' : '') + taskHTML(t, i === 0)).join('');
+    $('tasks-empty').classList.toggle('hidden', open.length > 0);
+    $('todo-h').classList.toggle('hidden', open.length === 0);
+    $('done-wrap').classList.toggle('hidden', done.length === 0);
+    $('done-h').textContent = `Done (${done.length})`;
+    $('done-tasks').innerHTML = done.map(t => taskHTML(t, false)).join('');
+
+    const badge = $('admin-badge');
+    const urgent = open.filter(t => t.urgency === 3).length;
+    badge.textContent = urgent;
+    badge.classList.toggle('hidden', urgent === 0);
+  }
+
+  $('task-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const title = $('task-title').value.trim();
+    if (!title) return;
+    state.tasks.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      title, mins: state.lastDur, urgency: state.lastUrg, created: Date.now(), done: false });
+    $('task-title').value = '';
+    save(); renderAdmin();
+  });
+
+  function onTaskClick(e) {
+    const btn = e.target.closest('[data-act]'); if (!btn) return;
+    const li = btn.closest('.task');
+    const t = state.tasks.find(x => x.id === li.dataset.id); if (!t) return;
+    if (btn.dataset.act === 'toggle') {
+      const nowDone = !t.done;
+      const apply = () => { t.done = nowDone; t.doneAt = Date.now(); save(); renderAdmin(); };
+      if (nowDone) {
+        li.classList.add('done');
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>';
+        setTimeout(() => { li.classList.add('leaving'); setTimeout(apply, 220); }, 250);
+        toast('Done ✓', () => { t.done = false; save(); renderAdmin(); });
+      } else apply();
+    } else if (btn.dataset.act === 'del') {
+      const idx = state.tasks.indexOf(t);
+      state.tasks.splice(idx, 1); save(); renderAdmin();
+      toast('Task deleted', () => { state.tasks.splice(idx, 0, t); save(); renderAdmin(); });
+    }
+  }
+  $('tasks').addEventListener('click', onTaskClick);
+  $('done-tasks').addEventListener('click', onTaskClick);
+  $('clear-done').addEventListener('click', () => {
+    const before = state.tasks.slice();
+    state.tasks = state.tasks.filter(t => !t.done); save(); renderAdmin();
+    toast('Cleared done tasks', () => { state.tasks = before; save(); renderAdmin(); });
+  });
+
+  // ---------- Toast ----------
+  let toastTimer, toastUndo;
+  function toast(msg, undo) {
+    $('toast-msg').textContent = msg;
+    toastUndo = undo;
+    $('toast-undo').classList.toggle('hidden', !undo);
+    $('toast').classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('toast').classList.remove('show'), 4000);
+  }
+  $('toast-undo').addEventListener('click', () => {
+    if (toastUndo) toastUndo();
+    toastUndo = null;
+    $('toast').classList.remove('show');
+  });
+
+  // ---------- Tabs ----------
+  function showTab(tab) {
+    state.tab = tab; save();
+    $('view-rev').classList.toggle('hidden', tab !== 'rev');
+    $('view-admin').classList.toggle('hidden', tab !== 'admin');
+    $('tab-rev').setAttribute('aria-selected', tab === 'rev');
+    $('tab-admin').setAttribute('aria-selected', tab === 'admin');
+    window.scrollTo(0, 0);
+  }
+  $('tab-rev').addEventListener('click', () => showTab('rev'));
+  $('tab-admin').addEventListener('click', () => showTab('admin'));
+
+  // ---------- Boot ----------
+  renderRev(); renderAdmin();
+  showTab('rev'); // always open on revision
+  // Re-render when the app comes back to the foreground (e.g. next morning).
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderRev(); renderAdmin(); } });
+
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
