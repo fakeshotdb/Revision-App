@@ -4,12 +4,15 @@ A tiny, revision-first planner for the phone. There's no account and no server:
 everything is saved on the device it's used on.
 
 **Revision tab (opens by default)**
-- First run: enter the questions left in the bank and the exam date.
+- First run: enter the questions left in the bank, the exam date, and how many
+  days before the exam she wants the questions finished (default 14). The daily
+  target is worked out to that finish-by date, so the buffer stays free for revising.
 - It shows one big number: how many questions to do today.
 - Log progress either as "I did 40" or "Bank says 890 left", whichever is easier.
 - It also shows days left, questions left and the daily pace for the days after
   today. That pace goes down when she does extra.
-- Days left counts today but not exam day.
+- "Days to finish" counts today but not the finish-by day. If the finish-by date
+  passes with questions still left, it spreads them over the days up to the exam.
 
 **Admin tab**
 - Type a task, tap how long it'll take (5 min – 2 hr+) and how urgent it is

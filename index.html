@@ -176,12 +176,15 @@
 
     <!-- First-run setup -->
     <div id="rev-setup" class="card hidden">
-      <p style="margin-top:0">Two numbers and you're set.</p>
+      <p style="margin-top:0">Three quick answers and you're set.</p>
       <form id="setup-form">
         <label class="field"><span>Questions left in the bank</span>
           <input type="number" id="setup-remaining" inputmode="numeric" min="0" placeholder="e.g. 2400" required></label>
         <label class="field"><span>Exam date</span>
           <input type="date" id="setup-date" required></label>
+        <label class="field"><span>Finish questions this many days before the exam</span>
+          <input type="number" id="setup-buffer" inputmode="numeric" min="0" value="14" required></label>
+        <p class="small muted" id="setup-finish" style="margin:-6px 2px 14px"></p>
         <button class="btn block" type="submit">Plan my revision</button>
       </form>
     </div>
@@ -197,10 +200,11 @@
 
       <div class="card">
         <div class="stats">
-          <div><b id="st-days">0</b><span id="st-days-l">days left</span></div>
+          <div><b id="st-days">0</b><span id="st-days-l">days to finish</span></div>
           <div><b id="st-left">0</b><span>questions left</span></div>
           <div><b id="st-pace">0</b><span>a day after today</span></div>
         </div>
+        <p class="small muted" id="st-dates" style="text-align:center;margin:12px 0 0"></p>
       </div>
 
       <h2>Log progress</h2>
@@ -273,6 +277,8 @@
       <input type="number" id="set-remaining" inputmode="numeric" min="0" required></label>
     <label class="field"><span>Exam date</span>
       <input type="date" id="set-date" required></label>
+    <label class="field"><span>Finish questions this many days before the exam</span>
+      <input type="number" id="set-buffer" inputmode="numeric" min="0" required></label>
     <div class="dialog-actions">
       <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
       <button class="btn" value="save">Save</button>
@@ -315,18 +321,27 @@
   const $ = id => document.getElementById(id);
 
   // ---------- Revision maths ----------
-  // Days left counts today but not exam day: exam tomorrow => 1 day left (today).
+  // Questions should be finished `bufferDays` before the exam, leaving time to revise.
+  const bufferOf = r => (r.bufferDays == null ? 14 : r.bufferDays);
+  const finishKey = (examDate, buffer) => {
+    const d = parseKey(examDate); d.setDate(d.getDate() - buffer); return keyOf(d);
+  };
+  // Days left counts today but not the finish-by day: finish-by tomorrow => 1 day left (today).
+  // Once the finish-by date has passed with questions still left, spread them up to the exam instead.
   function revPlan() {
     const r = state.rev;
     const today = todayKey();
     const doneToday = r.log.filter(e => e.d === today).reduce((s, e) => s + e.n, 0);
-    const daysLeft = daysBetween(today, r.examDate);
+    const finishBy = finishKey(r.examDate, bufferOf(r));
+    const examDays = daysBetween(today, r.examDate);
+    const overrun = daysBetween(today, finishBy) <= 0 && examDays > 0;
+    const daysLeft = overrun ? examDays : daysBetween(today, finishBy);
     const startOfToday = r.remaining + doneToday;
     const targetToday = daysLeft > 0 ? Math.ceil(startOfToday / daysLeft) : 0;
     const leftToday = Math.max(0, targetToday - doneToday);
     // Pace for the days after today, assuming she hits today's target.
     const paceAfter = daysLeft > 1 ? Math.ceil(Math.max(0, r.remaining - leftToday) / (daysLeft - 1)) : 0;
-    return { doneToday, daysLeft, targetToday, leftToday, paceAfter };
+    return { doneToday, daysLeft, targetToday, leftToday, paceAfter, finishBy, examDays, overrun };
   }
 
   // ---------- Revision render ----------
@@ -346,10 +361,10 @@
       $('hero-label').textContent = 'Question bank finished!';
       $('hero-bar').style.width = '100%';
       $('hero-sub').textContent = 'Amazing work. Rest up before the exam.';
-    } else if (p.daysLeft <= 0) {
+    } else if (p.examDays <= 0) {
       hero.classList.remove('done');
       $('hero-num').textContent = '🍀';
-      $('hero-label').textContent = p.daysLeft === 0 ? 'Exam day. You’ve got this.' : 'Exam’s been and gone';
+      $('hero-label').textContent = p.examDays === 0 ? 'Exam day. You’ve got this.' : 'Exam’s been and gone';
       $('hero-bar').style.width = '100%';
       $('hero-sub').textContent = 'Tap ✎ to set a new exam date.';
     } else {
@@ -363,10 +378,18 @@
       $('hero-sub').textContent = doneTarget
         ? `${fmt(p.doneToday)} done today. Anything extra makes the coming days lighter.`
         : `${fmt(p.doneToday)} of ${fmt(p.targetToday)} done today`;
+      if (p.overrun) $('hero-sub').textContent += ' · Into the buffer: spreading the rest up to the exam.';
     }
 
     $('st-days').textContent = Math.max(0, p.daysLeft);
-    $('st-days-l').textContent = p.daysLeft === 1 ? 'day left' : 'days left';
+    $('st-days-l').textContent = p.overrun
+      ? (p.daysLeft === 1 ? 'day to exam' : 'days to exam')
+      : (p.daysLeft === 1 ? 'day to finish' : 'days to finish');
+    const longDay = k => parseKey(k).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const buf = bufferOf(r);
+    $('st-dates').textContent = buf > 0
+      ? `Finish by ${longDay(p.finishBy)} · Exam ${longDay(r.examDate)} (${buf}-day buffer)`
+      : `Exam ${longDay(r.examDate)}`;
     $('st-left').textContent = fmt(r.remaining);
     $('st-pace').textContent = p.daysLeft > 1 ? fmt(p.paceAfter) : '–';
 
@@ -390,9 +413,20 @@
     const remaining = Math.max(0, parseInt($('setup-remaining').value, 10) || 0);
     const examDate = $('setup-date').value;
     if (!examDate) return;
-    state.rev = { remaining, examDate, log: [] };
+    const bufferDays = Math.max(0, parseInt($('setup-buffer').value, 10) || 0);
+    state.rev = { remaining, examDate, bufferDays, log: [] };
     save(); renderRev();
   });
+
+  function setupHint() {
+    const exam = $('setup-date').value;
+    const buf = Math.max(0, parseInt($('setup-buffer').value, 10) || 0);
+    $('setup-finish').textContent = exam
+      ? `Questions finished by ${parseKey(finishKey(exam, buf)).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}`
+      : '';
+  }
+  $('setup-date').addEventListener('input', setupHint);
+  $('setup-buffer').addEventListener('input', setupHint);
 
   $('mode-done').addEventListener('click', () => { state.logMode = 'done'; save(); renderRev(); });
   $('mode-left').addEventListener('click', () => { state.logMode = 'left'; save(); renderRev(); });
@@ -432,6 +466,7 @@
   $('rev-settings').addEventListener('click', () => {
     $('set-remaining').value = state.rev.remaining;
     $('set-date').value = state.rev.examDate;
+    $('set-buffer').value = bufferOf(state.rev);
     dlg.showModal();
   });
   dlg.addEventListener('close', () => {
@@ -439,6 +474,8 @@
     const rem = parseInt($('set-remaining').value, 10);
     if (!isNaN(rem) && rem >= 0) state.rev.remaining = rem;
     if ($('set-date').value) state.rev.examDate = $('set-date').value;
+    const buf = parseInt($('set-buffer').value, 10);
+    if (!isNaN(buf) && buf >= 0) state.rev.bufferDays = buf;
     save(); renderRev();
   });
   $('reset-rev').addEventListener('click', () => {
